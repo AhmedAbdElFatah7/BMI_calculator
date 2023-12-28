@@ -1,0 +1,104 @@
+.model small
+.data
+    height_msg db 'Enter height (in centimeters, two digits): $'
+    weight_msg db 'Enter weight (in kilograms, two digits): $'
+    result_msg db 'Your BMI is: $'
+    newline db 0Ah, 0Dh, '$'
+    height dw 0
+    weight dw 0
+    bmi dw 0
+
+.code
+main:
+    mov ax, @data
+    mov ds, ax
+
+    ; Get height input
+    mov ah, 09h
+    lea dx, height_msg
+    int 21h
+    mov ah, 01h
+    int 21h
+    sub al, '0'   ; Convert ASCII to integer
+    mov bl, al    ; Store the first digit
+    mov ah, 01h
+    int 21h
+    sub al, '0'   ; Convert ASCII to integer
+    mov bh, al    ; Store the second digit
+    mov ax, bx    ; Move the first digit to AX
+    shl ax, 4     ; Shift the first digit to the left by 4 positions
+    add al, bh    ; Combine the first and second digits
+    mov [height], ax  ; Store the result in height
+
+    ; Get weight input
+    mov ah, 09h
+    lea dx, weight_msg
+    int 21h
+    mov ah, 01h
+    int 21h
+    sub al, '0'   ; Convert ASCII to integer
+    mov bl, al    ; Store the first digit
+    mov ah, 01h
+    int 21h
+    sub al, '0'   ; Convert ASCII to integer
+    mov bh, al    ; Store the second digit
+    mov ax, bx    ; Move the first digit to AX
+    shl ax, 4     ; Shift the first digit to the left by 4 positions
+    add al, bh    ; Combine the first and second digits
+    mov [weight], ax  ; Store the result in weight
+
+    ; Calculate BMI = weight / (height * height)
+    mov ax, [height]
+    imul [height]
+    mov cx, ax
+    mov ax, [weight]
+    xor dx, dx
+    idiv cx
+    mov [bmi], ax
+
+    ; Display result
+    mov ah, 09h
+    lea dx, result_msg
+    int 21h
+    mov ax, [bmi]
+    call display_hex
+
+    ; Exit program
+    mov ah, 4Ch
+    int 21h
+
+display_hex:
+    ; Display a 16-bit hexadecimal number in AX
+    mov cx, 16
+    mov bx, 0
+
+next_digit:
+    xor dx, dx
+    div cx
+    cmp dl, 10
+    jl numeric_digit
+    add dl, 'A' - 10  ; Convert to hexadecimal character for A-F
+    jmp print_digit
+
+numeric_digit:
+    add dl, '0'
+
+print_digit:
+    push dx
+    inc bx
+    test ax, ax
+    jnz next_digit
+
+print_digits:
+    pop dx
+    mov ah, 02h
+    int 21h
+    dec bx
+    jnz print_digits
+
+    ; Print newline
+    mov ah, 09h
+    lea dx, newline
+    int 21h
+    ret
+end main
